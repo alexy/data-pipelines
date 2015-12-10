@@ -30,7 +30,7 @@ object IntroVarsValsBuiltIns {
   lazy val bar = println("bar bar bar!")
   println(bar)
 
-  lazy val dangerZone = if(true) throw new RuntimeException("Oh noes!")
+  lazy val dangerZone = if (true) throw new RuntimeException("Oh noes!")
 
   /*
 

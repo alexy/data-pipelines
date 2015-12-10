@@ -6,7 +6,7 @@ import mlbigbook.data.SimpleVec
 
 import scala.language.higherKinds
 
-object NearestNeighbors {
+object NearestNeighbors extends Serializable {
 
   type NeighborhoodSize = Int
 

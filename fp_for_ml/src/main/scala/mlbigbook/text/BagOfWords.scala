@@ -7,7 +7,7 @@ import mlbigbook.ml.{ Vectorizeable, Counting }
 
 import scala.language.higherKinds
 
-object BagOfWords {
+object BagOfWords extends Serializable {
 
   type Tokenizer = String => IndexedSeq[String]
 

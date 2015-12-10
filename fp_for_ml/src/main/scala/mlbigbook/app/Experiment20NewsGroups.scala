@@ -2,10 +2,12 @@ package mlbigbook.app
 
 import java.io.{ FileReader, BufferedReader, File }
 
-import fif.TravData
+import fif.{ ImplicitRddData, TravData }
 import mlbigbook.data.SimpleVec
 import mlbigbook.ml.{ Euclidian, NearestNeighbors }
 import mlbigbook.text.{ ShowImplicits, BagOfWords }
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{ SparkConf, SparkContext }
 import scala.util.Random
 
 object Experiment20NewsGroups extends App {
@@ -26,7 +28,16 @@ object Experiment20NewsGroups extends App {
   def whitespaceTokenizer(s: String): IndexedSeq[String] =
     s.split("\\\\s+").toIndexedSeq
 
-  implicit val _ = TravData
+  val sc = new SparkContext(
+    new SparkConf()
+      .setMaster(s"local[2]")
+      .setAppName("toydata")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+  )
+
+  implicit val _ = {
+    ImplicitRddData.rddIsData
+  }
 
   import DataFor20Newsgroups._
 
@@ -58,13 +69,16 @@ object Experiment20NewsGroups extends App {
   println(s"${corpus.size} documents across ${byNewsgroup.size} newsgroups")
 
   import ShowImplicits._
-  val (vectors, vectorizeable) = BagOfWords(whitespaceTokenizer)(corpus)
+  val (vectors, vectorizeable) = {
+    implicit val td = TravData
+    BagOfWords(whitespaceTokenizer)(corpus)
+  }
 
   val (trainingVectors, testingVectors) = {
     val shuffled =
       vectors
-        .toIndexedSeq
         .map { x => (x, Random.nextDouble()) }
+        .toSeq
         .sortBy(_._2)
         .map(_._1)
     val splitIndex = Random.nextInt(shuffled.size - 2)
@@ -74,7 +88,10 @@ object Experiment20NewsGroups extends App {
   // make the Nearest Neighbors based ranker
   val nnRanker = {
     implicit val v = vectorizeable
-    NearestNeighbors.ranker(Euclidian, trainingVectors.toTraversable.map(_._1))
+    NearestNeighbors.ranker(
+      Euclidian,
+      sc.parallelize(trainingVectors.map(_._1))
+    )
   }
 
   def selectRandomly(data: Traversable[(String, SimpleVec)]): String =
@@ -82,7 +99,7 @@ object Experiment20NewsGroups extends App {
 
   val testingDoc =
     testingVectors.head._1
-//    selectRandomly(testingVectors)
+  //    selectRandomly(testingVectors)
 
   val k = 5
   println(s"Using k= $k\n================\n\n\n\n")
